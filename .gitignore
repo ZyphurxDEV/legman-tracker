@@ -7,8 +7,6 @@ env/
 build/
 dist/
 *.spec
-
-# --- generated at build time (made from legman.png by make_icon.py) ---
 icon.ico
 
 # --- python ---

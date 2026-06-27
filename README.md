@@ -45,8 +45,8 @@ it.
     game URL and hit **Add** (or Enter).
   - **⟳** in the header forces an immediate check; **✕** closes the panel.
   - The panel auto-hides when it loses focus, like a normal flyout.
-- **Right-click the tray icon** → menu: Open, Check now, **Start with Windows**
-  (toggle launch at login), Quit.
+- **Right-click the tray icon** → menu: Open, Check now, Quit. (*Start with
+  Windows* lives on the panel's settings page.)
 - Click a **notification** to open that game's Roblox page.
 
 It checks every tracked game every **60 seconds**. The first check after adding a
@@ -69,10 +69,11 @@ You need Python 3 installed (3.14 was used here). Then just run:
 build.bat
 ```
 
-It creates a virtual environment, installs the dependencies, generates the icon,
-and runs PyInstaller. The result is **`dist\LegmanTracker.exe`** — a single ~46 MB
-file you can copy anywhere (no Python needed to run it). `build.bat` closes any
-running copy first so the rebuild doesn't fail on a locked exe.
+It creates a virtual environment, installs the dependencies, and runs PyInstaller
+(which builds the exe icon straight from `legman.png`). The result is
+**`dist\LegmanTracker.exe`** — a single ~38 MB file you can copy anywhere (no
+Python needed to run it). `build.bat` closes any running copy first so the rebuild
+doesn't fail on a locked exe.
 
 Run from source without building:
 

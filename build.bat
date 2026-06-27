@@ -27,13 +27,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Generating icon...
-"%PY%" make_icon.py
-
 echo Building exe...
 "%PY%" -m PyInstaller --noconfirm --onefile --windowed ^
     --name LegmanTracker ^
-    --icon icon.ico ^
+    --icon legman.png ^
     --add-data "legman.png;." ^
     --collect-all windows_toasts ^
     --collect-all winrt ^
