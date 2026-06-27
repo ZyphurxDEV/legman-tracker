@@ -1241,13 +1241,17 @@ def register_aumid():
     name + icon. The toast attribution icon must be a PNG in a persistent location
     (Windows doesn't render an .ico there reliably, and the onefile temp dir is
     gone after exit), so render the bundled icon.ico to a PNG in the data folder."""
-    icon_path = os.path.join(DATA_DIR, "app_icon.png")
+    icon_path = os.path.join(DATA_DIR, "app_icon_s.png")
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
         src = resource_path("icon.ico")
-        pm = QtGui.QIcon(src).pixmap(256, 256) if os.path.exists(src) else QtGui.QPixmap()
+        # Render a small, already-downsampled PNG (the .ico's clean 48px frame)
+        # rather than a 256px image: Windows downscales the attribution icon itself
+        # with a poor filter, and a big detailed source aliases into a rough ~20px
+        # result. A pre-shrunk source gives Windows almost nothing to mangle.
+        pm = QtGui.QIcon(src).pixmap(48, 48) if os.path.exists(src) else QtGui.QPixmap()
         if pm.isNull():
-            pm = _fallback_icon(256)
+            pm = _fallback_icon(48)
         if not pm.save(icon_path, "PNG"):
             icon_path = None
     except Exception:
