@@ -46,7 +46,7 @@ from PySide6.QtCore import Qt
 
 APP_NAME = "Legman Tracker"
 APP_ID = "legmantracker"
-AUMID = "LegmanTracker"
+AUMID = "Zyphurx.LegmanTracker"
 
 BADGE_RARE_THRESHOLD = 250
 
@@ -1237,17 +1237,20 @@ def set_autostart(enable):
 def register_aumid():
     """Register our AppUserModelID with Windows so toast notifications are shown
     as banners (Windows only shows banners for recognised app IDs) and carry our
-    name + icon. The icon must live somewhere persistent (not the onefile temp
-    dir), so copy the bundled png into the data folder first."""
-    icon_path = os.path.join(DATA_DIR, "app_icon.ico")
+    name + icon. The toast attribution icon must be a PNG in a persistent location
+    (Windows doesn't render an .ico there reliably, and the onefile temp dir is
+    gone after exit), so render the bundled icon.ico to a PNG in the data folder."""
+    icon_path = os.path.join(DATA_DIR, "app_icon.png")
     try:
+        os.makedirs(DATA_DIR, exist_ok=True)
         src = resource_path("icon.ico")
-        if os.path.exists(src):
-            with open(src, "rb") as f:
-                data = f.read()
-            with open(icon_path, "wb") as f:
-                f.write(data)
+        pm = QtGui.QIcon(src).pixmap(256, 256) if os.path.exists(src) else QtGui.QPixmap()
+        if pm.isNull():
+            pm = _fallback_icon(256)
+        if not pm.save(icon_path, "PNG"):
+            icon_path = None
     except Exception:
+        logger.exception("failed to render toast icon")
         icon_path = None
     try:
         import winreg
@@ -1292,17 +1295,27 @@ def _fallback_icon(size=64):
 
 
 def app_icon_pixmap(size=64):
-    """The legman app icon as a QPixmap (falls back to a drawn 'L' if missing).
-    Uses QIcon.pixmap so the best-matching frame is picked from the multi-res
-    .ico instead of upscaling a small one."""
+    """The legman app icon as a QPixmap at the given logical size, rendered at the
+    display's device pixel ratio so it stays crisp on HiDPI / scaled screens
+    (otherwise a small pixmap is upscaled and looks blurry). The best-matching
+    frame is pulled from the multi-res .ico. Falls back to a drawn 'L'."""
+    app = QtWidgets.QApplication.instance()
+    dpr = float(app.devicePixelRatio()) if app is not None else 1.0
+    if dpr < 1.0:
+        dpr = 1.0
+    px = max(1, round(size * dpr))
+    pm = None
     path = resource_path("icon.ico")
     if os.path.exists(path):
         ic = QtGui.QIcon(path)
         if not ic.isNull():
-            pm = ic.pixmap(size, size)
-            if not pm.isNull():
-                return pm
-    return _fallback_icon(size)
+            cand = ic.pixmap(px, px)
+            if not cand.isNull():
+                pm = cand
+    if pm is None:
+        pm = _fallback_icon(px)
+    pm.setDevicePixelRatio(dpr)
+    return pm
 
 
 def app_qicon():
