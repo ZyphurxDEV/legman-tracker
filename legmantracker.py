@@ -46,7 +46,7 @@ from PySide6.QtCore import Qt
 
 APP_NAME = "Legman Tracker"
 APP_ID = "legmantracker"
-AUMID = "Zyphurx.LegmanTracker"
+AUMID = "Legman.LegmanTracker"
 
 BADGE_RARE_THRESHOLD = 250
 

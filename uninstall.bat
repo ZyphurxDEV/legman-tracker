@@ -30,8 +30,10 @@ echo   [2/4] Removing autostart entry...
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v LegmanTracker /f >nul 2>&1
 
 echo   [3/4] Removing notification registry keys...
+reg delete "HKCU\Software\Classes\AppUserModelId\Legman.LegmanTracker" /f >nul 2>&1
 reg delete "HKCU\Software\Classes\AppUserModelId\Zyphurx.LegmanTracker" /f >nul 2>&1
 reg delete "HKCU\Software\Classes\AppUserModelId\LegmanTracker" /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Legman.LegmanTracker" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Zyphurx.LegmanTracker" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\LegmanTracker" /f >nul 2>&1
 
