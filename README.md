@@ -12,7 +12,7 @@ Qt (PySide6) — no browser, no console.
 ## Download
 
 Grab the latest **`LegmanTracker.exe`** from the
-[**Releases**](https://github.com/ZyphurxDEV/legmantracker/releases/latest) page,
+[**Releases**](https://github.com/ZyphurxDEV/legman-tracker/releases/latest) page,
 then just run it — no Python, no installer. It's a single ~38 MB file you can put
 anywhere (Desktop, a folder, wherever).
 
