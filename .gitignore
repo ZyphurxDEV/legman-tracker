@@ -1,0 +1,33 @@
+# --- virtual environment ---
+.venv/
+venv/
+env/
+
+# --- PyInstaller build output ---
+build/
+dist/
+*.spec
+
+# --- generated at build time (made from legman.png by make_icon.py) ---
+icon.ico
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# --- local dev / scratch files ---
+_*.py
+*.log
+
+# --- editor / tooling ---
+.claude/
+.vscode/
+.idea/
+*.code-workspace
+
+# --- OS junk ---
+Thumbs.db
+desktop.ini
+.DS_Store

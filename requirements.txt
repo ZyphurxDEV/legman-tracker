@@ -1,0 +1,4 @@
+aiohttp
+pillow
+windows-toasts
+PySide6-Essentials
