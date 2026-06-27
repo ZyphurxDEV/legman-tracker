@@ -240,13 +240,32 @@ def save_tracked(data):
         os.replace(tmp, TRACKED_FILE)
 
 
+def _delete_cached_icons(info, key):
+    """Remove a game's cached icon files (its own icon + any badge icons) when it
+    is untracked, so the icons folder doesn't accumulate orphans."""
+    paths = {os.path.join(ICON_DIR, f"{key}.png")}
+    ip = info.get("icon_path")
+    if ip:
+        paths.add(ip)
+    for bid in (info.get("badges") or {}):
+        paths.add(os.path.join(ICON_DIR, f"badge_{bid}.png"))
+    for p in paths:
+        try:
+            if p and os.path.exists(p):
+                os.remove(p)
+        except OSError:
+            logger.exception("failed to delete cached icon %s", p)
+
+
 def remove_tracked(key):
     with TRACK_LOCK:
         data = load_tracked()
         if key in data:
-            name = data[key].get("game_name", "that game")
+            info = data[key]
+            name = info.get("game_name", "that game")
             del data[key]
             save_tracked(data)
+            _delete_cached_icons(info, key)
             return name
         return None
 
@@ -1100,12 +1119,47 @@ async def backfill_badge_icons(session):
         logger.info("backfilled badge icons")
 
 
+def sweep_orphan_icons():
+    """Delete cached icon files no longer referenced by any tracked game or by the
+    recent-updates feed - clears orphans left by games removed before this cleanup
+    existed (and any other strays)."""
+    try:
+        if not os.path.isdir(ICON_DIR):
+            return
+        keep = set()
+        for key, info in (load_tracked() or {}).items():
+            keep.add(f"{key}.png")
+            ip = info.get("icon_path")
+            if ip:
+                keep.add(os.path.basename(ip))
+            for bid in (info.get("badges") or {}):
+                keep.add(f"badge_{bid}.png")
+        for ev in load_history():
+            for k in ("icon_path", "overlay_icon"):
+                p = ev.get(k)
+                if p:
+                    keep.add(os.path.basename(p))
+        removed = 0
+        for fn in os.listdir(ICON_DIR):
+            if fn.lower().endswith(".png") and fn not in keep:
+                try:
+                    os.remove(os.path.join(ICON_DIR, fn))
+                    removed += 1
+                except OSError:
+                    logger.exception("failed to delete orphan icon %s", fn)
+        if removed:
+            logger.info("swept %d orphan icon(s)", removed)
+    except Exception:
+        logger.exception("orphan icon sweep failed")
+
+
 async def poller_main():
     global POLL_LOCK
     POLL_LOCK = asyncio.Lock()
     logger.info("poller started (every %ds)", current_poll_interval())
     connector = aiohttp.TCPConnector(limit=20, ttl_dns_cache=300)
     async with aiohttp.ClientSession(headers=UA, timeout=CLIENT_TIMEOUT, connector=connector) as session:
+        sweep_orphan_icons()
         try:
             await backfill_badge_icons(session)
         except Exception:
