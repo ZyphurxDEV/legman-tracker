@@ -1241,7 +1241,7 @@ def register_aumid():
     name + icon. The toast attribution icon must be a PNG in a persistent location
     (Windows doesn't render an .ico there reliably, and the onefile temp dir is
     gone after exit), so render the bundled icon.ico to a PNG in the data folder."""
-    icon_path = os.path.join(DATA_DIR, "app_icon_s.png")
+    icon_path = os.path.join(DATA_DIR, "notification_icon.png")
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
         src = resource_path("icon.ico")
