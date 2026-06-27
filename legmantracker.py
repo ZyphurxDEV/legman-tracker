@@ -1295,10 +1295,10 @@ def _fallback_icon(size=64):
 
 
 def app_icon_pixmap(size=64):
-    """The legman app icon as a QPixmap at the given logical size, rendered at the
-    display's device pixel ratio so it stays crisp on HiDPI / scaled screens
-    (otherwise a small pixmap is upscaled and looks blurry). The best-matching
-    frame is pulled from the multi-res .ico. Falls back to a drawn 'L'."""
+    """The legman app icon as a QPixmap at the given logical size. Scaled down from
+    the icon's 256px master with smooth filtering (cleaner at small sizes than the
+    .ico's tiny pre-baked frames) and rendered at the display's device pixel ratio
+    so it stays crisp on HiDPI / scaled screens. Falls back to a drawn 'L'."""
     app = QtWidgets.QApplication.instance()
     dpr = float(app.devicePixelRatio()) if app is not None else 1.0
     if dpr < 1.0:
@@ -1309,10 +1309,10 @@ def app_icon_pixmap(size=64):
     if os.path.exists(path):
         ic = QtGui.QIcon(path)
         if not ic.isNull():
-            cand = ic.pixmap(px, px)
-            if not cand.isNull():
-                pm = cand
-    if pm is None:
+            big = ic.pixmap(256, 256)
+            if not big.isNull():
+                pm = big.scaled(px, px, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    if pm is None or pm.isNull():
         pm = _fallback_icon(px)
     pm.setDevicePixelRatio(dpr)
     return pm
