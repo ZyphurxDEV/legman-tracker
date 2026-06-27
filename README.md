@@ -74,6 +74,17 @@ Everything is in `%APPDATA%\LegmanTracker\`:
 - `icons\` — cached game icons (shown on cards + toasts)
 - `legmantracker.log` — activity log
 
+It also writes two small things to the registry (current user only, no admin):
+the **autostart** entry (only if you turn on *Start with Windows*) and the
+**AppUserModelID** keys that let Windows show toast banners.
+
+## Uninstalling
+
+Since it's a portable app, there's nothing in *Add/Remove Programs*. To remove it
+completely, run **`uninstall.bat`** — it closes the app and deletes the data
+folder, the autostart entry, and the notification registry keys (all under your
+user account, no admin needed). Then just delete `LegmanTracker.exe` itself.
+
 ## Building the .exe yourself
 
 You need Python 3 installed (3.14 was used here). Then just run:
