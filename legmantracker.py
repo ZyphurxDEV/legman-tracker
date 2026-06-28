@@ -238,30 +238,14 @@ def save_tracked(data):
         os.replace(tmp, TRACKED_FILE)
 
 
-def _delete_cached_icons(info, key):
-    paths = {os.path.join(ICON_DIR, f"{key}.png")}
-    ip = info.get("icon_path")
-    if ip:
-        paths.add(ip)
-    for bid in (info.get("badges") or {}):
-        paths.add(os.path.join(ICON_DIR, f"badge_{bid}.png"))
-    for p in paths:
-        try:
-            if p and os.path.exists(p):
-                os.remove(p)
-        except OSError:
-            logger.exception("failed to delete cached icon %s", p)
-
-
 def remove_tracked(key):
     with TRACK_LOCK:
         data = load_tracked()
         if key in data:
-            info = data[key]
-            name = info.get("game_name", "that game")
+            name = data[key].get("game_name", "that game")
             del data[key]
             save_tracked(data)
-            _delete_cached_icons(info, key)
+            sweep_orphan_icons()
             return name
         return None
 
@@ -1112,11 +1096,6 @@ def sweep_orphan_icons():
                 keep.add(os.path.basename(ip))
             for bid in (info.get("badges") or {}):
                 keep.add(f"badge_{bid}.png")
-        for ev in load_history():
-            for k in ("icon_path", "overlay_icon"):
-                p = ev.get(k)
-                if p:
-                    keep.add(os.path.basename(p))
         removed = 0
         for fn in os.listdir(ICON_DIR):
             if fn.lower().endswith(".png") and fn not in keep:
