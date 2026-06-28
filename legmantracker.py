@@ -137,7 +137,6 @@ def get_unix_ts(ts):
 
 
 def is_real_update(ts1, ts2):
-    """Forward-only update check (roblox cache flaps backwards constantly)."""
     if not ts1 or not ts2:
         return False
     u1 = get_unix_ts(ts1)
@@ -200,8 +199,6 @@ def is_placeholder_name(name):
 
 
 def recover_name(info, cached_name, root_place_id):
-    """Best real name we have when the live name is a placeholder: prefer the
-    cached game name, else the stored root sub-place name, else any sub-place."""
     if not is_placeholder_name(cached_name):
         return cached_name
     subs = info.get("subplaces", {}) or {}
@@ -242,8 +239,6 @@ def save_tracked(data):
 
 
 def _delete_cached_icons(info, key):
-    """Remove a game's cached icon files (its own icon + any badge icons) when it
-    is untracked, so the icons folder doesn't accumulate orphans."""
     paths = {os.path.join(ICON_DIR, f"{key}.png")}
     ip = info.get("icon_path")
     if ip:
@@ -308,8 +303,6 @@ def _plural(n, word):
 
 
 def subplace_count(info):
-    """Number of real subplaces, i.e. excluding the root place (the root IS the
-    main game, not a subplace)."""
     subs = info.get("subplaces", {}) or {}
     root = str(info.get("root_place_id"))
     return sum(1 for pid in subs if str(pid) != root)
@@ -405,7 +398,6 @@ def _clamp_interval(v):
 
 
 def load_poll_interval():
-    """Load the saved interval into the cache (called once at startup)."""
     global _poll_interval
     _poll_interval = _clamp_interval(load_settings().get("poll_interval", POLL_INTERVAL_DEFAULT))
     return _poll_interval
@@ -425,9 +417,6 @@ def set_poll_interval(seconds):
 
 
 def _migrate_badge_cache():
-    """One-time cleanup of badge icons cached by older versions (some were saved
-    as blank/pending placeholders and would never refresh). Runs once; from then
-    on badge icons are always re-fetched fresh (force=True)."""
     marker = os.path.join(DATA_DIR, ".badge_cache_v2")
     if os.path.exists(marker):
         return
@@ -462,7 +451,6 @@ async def resolve_universe(session, place_id):
 
 
 async def fetch_game(session, universe_id):
-    """list (maybe empty=private) on success, None on transient failure."""
     try:
         async with session.get(
             f"https://games.roblox.com/v1/games?universeIds={universe_id}"
@@ -551,9 +539,6 @@ async def ensure_icon_file(session, key, icon_url):
 
 
 async def ensure_image_file(session, name, url, force=False):
-    """Download an image and cache it locally (toast images must be a local file
-    on win32). `force` re-downloads even if cached - used for badge icons, whose
-    artwork can change (e.g. a brand-new badge's icon finishing processing)."""
     if not url:
         return None
     os.makedirs(ICON_DIR, exist_ok=True)
@@ -573,8 +558,6 @@ async def ensure_image_file(session, name, url, force=False):
 
 
 async def fetch_all_badges(session, universe_id):
-    """None on failure (so a partial fetch isn't read as 'all badges deleted'),
-    else a list of badge dicts (possibly empty)."""
     badges = []
     cursor = None
     while True:
@@ -616,7 +599,6 @@ async def fetch_badge_icon(session, badge_id):
 # --------------------------------------------------------------------------- #
 
 def notify(title, lines, launch_url=None, image_path=None):
-    """Pop a Windows toast (skipped while the panel is open on screen)."""
     if not TOASTS_ON:
         return
     if POPUP_VISIBLE:
@@ -638,7 +620,6 @@ def notify(title, lines, launch_url=None, image_path=None):
 
 
 def push_event(event, toast=True):
-    """Record a feed event: optional toast + history + live signal to the gui."""
     try:
         if toast:
             notify(event.get("game_name", APP_NAME),
@@ -699,7 +680,6 @@ def _confirm_clear(key, cat, item):
 
 
 def _status_seen(key, value):
-    """Bump and return how many sweeps in a row `value` has been pending."""
     p = _pending(key)
     cur = p.get("status")
     if cur and cur[0] == value:
@@ -1076,9 +1056,6 @@ async def poll_now():
 
 
 async def backfill_badge_icons(session):
-    """Fetch the real icon for badge events already in the feed that don't have
-    one yet (captured before the badge's art finished uploading). Runs once at
-    startup so old entries stop showing the medal placeholder."""
     hist = load_history()
     if not hist:
         return
@@ -1089,8 +1066,6 @@ async def backfill_badge_icons(session):
         typ = ev.get("type")
         if typ not in ("badge", "badge_del"):
             continue
-        # Skip badges whose game is no longer tracked - don't re-download their
-        # icons back into the data folder after the game was removed.
         if str(ev.get("universe_id")) not in tracked:
             continue
         ov = ev.get("overlay_icon")
@@ -1126,9 +1101,6 @@ async def backfill_badge_icons(session):
 
 
 def sweep_orphan_icons():
-    """Delete cached icon files no longer referenced by any tracked game or by the
-    recent-updates feed - clears orphans left by games removed before this cleanup
-    existed (and any other strays)."""
     try:
         if not os.path.isdir(ICON_DIR):
             return
@@ -1241,19 +1213,10 @@ def set_autostart(enable):
 
 
 def register_aumid():
-    """Register our AppUserModelID with Windows so toast notifications are shown
-    as banners (Windows only shows banners for recognised app IDs) and carry our
-    name + icon. The toast attribution icon must be a PNG in a persistent location
-    (Windows doesn't render an .ico there reliably, and the onefile temp dir is
-    gone after exit), so render the bundled icon.ico to a PNG in the data folder."""
     icon_path = os.path.join(DATA_DIR, "notification_icon.png")
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
         src = resource_path("icon.ico")
-        # Render a small, already-downsampled PNG (the .ico's clean 48px frame)
-        # rather than a 256px image: Windows downscales the attribution icon itself
-        # with a poor filter, and a big detailed source aliases into a rough ~20px
-        # result. A pre-shrunk source gives Windows almost nothing to mangle.
         pm = QtGui.QIcon(src).pixmap(48, 48) if os.path.exists(src) else QtGui.QPixmap()
         if pm.isNull():
             pm = _fallback_icon(48)
@@ -1278,14 +1241,11 @@ def register_aumid():
 # --------------------------------------------------------------------------- #
 
 def resource_path(name):
-    """Locate a bundled asset both when run from source and when frozen."""
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, name)
 
 
 def _fallback_icon(size=64):
-    """Drawn 'L' badge, used only if icon.ico is somehow missing (keeps the app
-    icon working without pulling in Pillow at runtime)."""
     pm = QtGui.QPixmap(size, size)
     pm.fill(Qt.transparent)
     p = QtGui.QPainter(pm)
@@ -1305,10 +1265,6 @@ def _fallback_icon(size=64):
 
 
 def app_icon_pixmap(size=64):
-    """The legman app icon as a QPixmap at the given logical size. Scaled down from
-    the icon's 256px master with smooth filtering (cleaner at small sizes than the
-    .ico's tiny pre-baked frames) and rendered at the display's device pixel ratio
-    so it stays crisp on HiDPI / scaled screens. Falls back to a drawn 'L'."""
     app = QtWidgets.QApplication.instance()
     dpr = float(app.devicePixelRatio()) if app is not None else 1.0
     if dpr < 1.0:
@@ -1462,16 +1418,12 @@ def _circular_pixmap(path, size):
 
 
 def _clear_pixmap_caches():
-    """Free cached QPixmaps before QApplication is torn down (QPixmaps destroyed
-    after the GUI app crash on exit). Wired to QApplication.aboutToQuit."""
     _SVG_PM_CACHE.clear()
     _rounded_cached.cache_clear()
     _circular_cached.cache_clear()
 
 
 def _medal_icon(size=38, radius=9):
-    """A medal on a purple rounded square - the hero icon for a badge that has no
-    artwork of its own."""
     pm = QtGui.QPixmap(size, size)
     pm.fill(Qt.transparent)
     p = QtGui.QPainter(pm)
@@ -1490,7 +1442,6 @@ def _medal_icon(size=38, radius=9):
 
 
 def _compose_icons(base_pm, corner_pm, size=38):
-    """Big base icon with a small circular corner icon (bottom-right)."""
     if base_pm is None:
         return corner_pm
     if corner_pm is None:
@@ -1511,9 +1462,6 @@ def _compose_icons(base_pm, corner_pm, size=38):
 
 
 def feed_card_icon(event, size=38, radius=9):
-    """Builds the card thumbnail. For badge events the BADGE is the hero (its art
-    or a medal) with the game icon in the corner; everything else just shows the
-    game/place icon."""
     typ = event.get("type", "update")
     game_path = event.get("icon_path")
     if typ in ("badge", "badge_del"):
@@ -1672,9 +1620,6 @@ class ClickableFrame(QtWidgets.QFrame):
 
 
 class ElidedLabel(QtWidgets.QLabel):
-    """Single-line label that elides with '…' instead of clipping mid-word.
-    Colour is passed explicitly (a custom paintEvent doesn't inherit the QSS
-    `color`); font size/weight still come from the stylesheet via objectName."""
     def __init__(self, text, color, parent=None):
         super().__init__(text, parent)
         self._color = QtGui.QColor(color)
@@ -1701,7 +1646,6 @@ class ElidedLabel(QtWidgets.QLabel):
 
 
 class ToggleSwitch(QtWidgets.QAbstractButton):
-    """Small iOS-style on/off switch (green when on)."""
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setCheckable(True)
@@ -1799,7 +1743,6 @@ def make_update_card(event):
 
 
 def _owners_chip(count):
-    """A small 'N owners' indicator: person icon + count (replaces the word)."""
     w = QtWidgets.QWidget()
     h = QtWidgets.QHBoxLayout(w)
     h.setContentsMargins(0, 0, 0, 0)
@@ -1880,9 +1823,6 @@ def clear_layout(layout):
 
 
 class HintFilter(QtCore.QObject):
-    """Redirects widget tooltips to the popup's status line instead of using
-    native QToolTip windows (which stutter over a translucent always-on-top
-    window). Reads each widget's existing setToolTip() text."""
     def __init__(self, popup):
         super().__init__(popup)
         self.popup = popup
