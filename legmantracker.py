@@ -245,7 +245,6 @@ def remove_tracked(key):
             name = data[key].get("game_name", "that game")
             del data[key]
             save_tracked(data)
-            sweep_orphan_icons()
             return name
         return None
 
@@ -1043,14 +1042,11 @@ async def backfill_badge_icons(session):
     hist = load_history()
     if not hist:
         return
-    tracked = set(load_tracked().keys())
     changed = False
     fetch_targets = {}
     for ev in hist:
         typ = ev.get("type")
         if typ not in ("badge", "badge_del"):
-            continue
-        if str(ev.get("universe_id")) not in tracked:
             continue
         ov = ev.get("overlay_icon")
         if ov and os.path.exists(ov):
@@ -1084,39 +1080,12 @@ async def backfill_badge_icons(session):
         logger.info("backfilled badge icons")
 
 
-def sweep_orphan_icons():
-    try:
-        if not os.path.isdir(ICON_DIR):
-            return
-        keep = set()
-        for key, info in (load_tracked() or {}).items():
-            keep.add(f"{key}.png")
-            ip = info.get("icon_path")
-            if ip:
-                keep.add(os.path.basename(ip))
-            for bid in (info.get("badges") or {}):
-                keep.add(f"badge_{bid}.png")
-        removed = 0
-        for fn in os.listdir(ICON_DIR):
-            if fn.lower().endswith(".png") and fn not in keep:
-                try:
-                    os.remove(os.path.join(ICON_DIR, fn))
-                    removed += 1
-                except OSError:
-                    logger.exception("failed to delete orphan icon %s", fn)
-        if removed:
-            logger.info("swept %d orphan icon(s)", removed)
-    except Exception:
-        logger.exception("orphan icon sweep failed")
-
-
 async def poller_main():
     global POLL_LOCK
     POLL_LOCK = asyncio.Lock()
     logger.info("poller started (every %ds)", current_poll_interval())
     connector = aiohttp.TCPConnector(limit=20, ttl_dns_cache=300)
     async with aiohttp.ClientSession(headers=UA, timeout=CLIENT_TIMEOUT, connector=connector) as session:
-        sweep_orphan_icons()
         try:
             await backfill_badge_icons(session)
         except Exception:
